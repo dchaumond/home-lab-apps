@@ -1,0 +1,23 @@
+
+
+- name: Créer le répertoire de l'application
+  file:
+    path: "{{ docker_admin_home | realpath }}/{{ app_name }}"
+    state: directory
+    owner: docker-admin
+    group: docker
+
+- name: Créer les sous-répertoires de volumes
+  file:
+    path: "{{ env_json.docker_admin_home | realpath }}/{{ app_name }}/{{ item.host_path }}"
+    state: directory
+    owner: docker-admin
+    group: docker
+  loop: "{{ env_json.apps[app_name].volumes | default([]) }}"
+
+- name: Déployer le docker-compose.yml
+  template:
+    src: docker-compose.yml.j2
+    dest: "{{ env_json.docker_admin_home }}/{{ app_name }}/docker-compose.yml"
+    owner: docker-admin
+    group: docker

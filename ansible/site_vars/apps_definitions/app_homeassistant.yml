@@ -1,0 +1,9 @@
+app_name: homeassistant
+image: "ghcr.io/home-assistant/home-assistant:stable"
+ports:
+  - "8123:8123"
+volumes:
+  - host_path: "data"
+    container_path: "/config"
+env_vars:
+  TZ: "Europe/Paris"

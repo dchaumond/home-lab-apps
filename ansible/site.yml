@@ -1,0 +1,15 @@
+- name: Déployer les applications Docker
+  hosts: apps_runners
+  become: false
+  tasks:
+    - name: Lire .env.json
+      include_vars:
+        file: "{{ playbook_dir }}/../.env.json"
+        name: env_json
+
+    - include_role:
+        name: docker_app_deploy
+      loop: "{{ apps }}"
+      vars:
+        app_name: "{{ item }}"
+        docker_admin_home: "{{ env_json.docker_admin_home }}"

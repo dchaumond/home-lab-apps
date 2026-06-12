@@ -1,0 +1,30 @@
+# Ignore les fichiers sensibles et les artefacts
+.env.json
+
+# Ignore les répertoires de déploiement Docker
+apps/
+
+# Ignore les fichiers temporaires
+*.swp
+*.un~
+*.tmp
+
+# Ignore les fichiers de logs
+*.log
+
+# Ignore les fichiers d'environnement locaux
+.env
+.env.local
+
+# Ignore les fichiers de cache Ansible
+*.retry
+
+# Ignore les fichiers de configuration IDE
+.idea/
+.vscode/
+*.iml
+
+# Ignore les fichiers de dépendances
+node_modules/
+pip-cache/
+__pycache__/

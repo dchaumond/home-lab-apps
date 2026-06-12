@@ -1,0 +1,27 @@
+version: '3.8'
+services:
+  {{ app_name }}:
+    image: {{ env_json.apps[app_name].image }}
+    container_name: {{ app_name }}
+    restart: unless-stopped
+    environment:
+      {% for key, value in env_json.apps[app_name].env_vars.items() %}
+      {{ key }}: "{{ value }}"
+      {% endfor %}
+    ports:
+      {% for port in env_json.apps[app_name].ports %}
+      - "{{ port }}"
+      {% endfor %}
+    networks:
+      - app_network
+    volumes:
+      {% for volume in env_json.apps[app_name].volumes | default([]) %}
+      - "{{ docker_admin_home | realpath }}/{{ app_name }}/{{ volume.host_path }}:{{ volume.container_path }}"
+      {% endfor %}
+
+networks:
+  app_network:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: {{ env_json.networks.app_network.subnet }}

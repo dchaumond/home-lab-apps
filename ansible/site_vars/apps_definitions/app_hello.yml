@@ -1,0 +1,6 @@
+app_name: hello
+image: "nginxdemos/hello:plain-text"
+ports:
+  - "8080:80"
+volumes: []
+env_vars: {}

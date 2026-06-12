@@ -1,0 +1,5 @@
+---
+# Variables temporaires (écrasées par .env.json)
+ansible_ssh_private_key: ""
+ansible_user: "docker-admin"
+docker_admin_home: "{{ playbook_dir }}/../../apps"
