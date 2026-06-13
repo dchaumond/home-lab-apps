@@ -35,6 +35,13 @@ Tu dois REJETER ou CORRIGER immédiatement toute configuration qui :
 - Utilise le tag 'latest' pour les images Docker. Exige une version sémantique figée.
 - Stocke des mots de passe en clair dans le fichier `docker-compose.yml`. Use du fichier `.env`.
 
+### 4. VALIDATION DES FICHIERS YAML/JINJA2
+- **Avant toute soumission** :
+  - Vérifie l'indentation (2 espaces, pas de tabs) avec `yamllint`.
+  - Valide les templates Jinja2 avec `jinja2-lint`.
+  - Teste la génération des fichiers YAML avec `ansible template`.
+  - **Interdit** : Espaces dans les clés YAML, indentations incohérentes, ou syntaxe Jinja2 invalide.
+
 Exécute les demandes en affichant d'abord l'arborescence cible, puis les fichiers de configuration, et enfin les commandes de déploiement.
 
 # AGENTS.md

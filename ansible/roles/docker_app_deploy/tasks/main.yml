@@ -1,23 +1,34 @@
 
 
-- name: Créer le répertoire de l'application
+- name: Créer le répertoire parent de l'application
   file:
-    path: "{{ docker_admin_home | realpath }}/{{ app_name }}"
+    path: "{{ env_json.docker_admin.apps_home | realpath }}/{{ app_name }}"
     state: directory
     owner: docker-admin
     group: docker
+    mode: "2775"  # SetGID + rwxrwxr-x
 
 - name: Créer les sous-répertoires de volumes
   file:
-    path: "{{ env_json.docker_admin_home | realpath }}/{{ app_name }}/{{ item.host_path }}"
+    path: "{{ env_json.docker_admin.apps_home | realpath }}/{{ app_name }}/{{ volume_item.host_path }}"
     state: directory
     owner: docker-admin
     group: docker
+    mode: "2775"  # SetGID + rwxrwxr-x (permet l'écriture au groupe docker)
   loop: "{{ env_json.apps[app_name].volumes | default([]) }}"
+  loop_control:
+    loop_var: volume_item
 
 - name: Déployer le docker-compose.yml
   template:
     src: docker-compose.yml.j2
-    dest: "{{ env_json.docker_admin_home }}/{{ app_name }}/docker-compose.yml"
+    dest: "{{ docker_admin_home | realpath }}/{{ app_name }}/docker-compose.yml"
     owner: docker-admin
     group: docker
+
+- name: Démarrer l'application
+  ansible.builtin.command: docker-compose up -d --remove-orphans
+  args:
+    chdir: "{{ docker_admin_home | realpath }}/{{ app_name }}"
+  register: docker_compose_up
+  changed_when: "'Creating' in docker_compose_up.stdout or 'Recreating' in docker_compose_up.stdout"

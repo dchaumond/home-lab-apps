@@ -12,4 +12,4 @@
       loop: "{{ apps }}"
       vars:
         app_name: "{{ item }}"
-        docker_admin_home: "{{ env_json.docker_admin_home }}"
+        docker_admin_home: "{{ env_json.docker_admin.apps_home }}"

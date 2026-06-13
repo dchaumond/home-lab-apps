@@ -4,20 +4,24 @@ services:
     image: {{ env_json.apps[app_name].image }}
     container_name: {{ app_name }}
     restart: unless-stopped
+{% if env_json.apps[app_name].env_vars | length > 0 %}
     environment:
-      {% for key, value in env_json.apps[app_name].env_vars.items() %}
-      {{ key }}: "{{ value }}"
-      {% endfor %}
+{% for key, value in env_json.apps[app_name].env_vars.items() %}
+      {{ key }}: {{ value }}
+{% endfor %}
+{% endif %}
     ports:
-      {% for port in env_json.apps[app_name].ports %}
+{% for port in env_json.apps[app_name].ports %}
       - "{{ port }}"
-      {% endfor %}
+{% endfor %}
+{% if env_json.apps[app_name].volumes | default([]) | length > 0 %}
+    volumes:
+{% for volume in env_json.apps[app_name].volumes %}
+      - "{{ env_json.docker_admin.apps_home }}/{{ app_name }}/{{ volume.host_path }}:{{ volume.container_path }}"
+{% endfor %}
+{% endif %}
     networks:
       - app_network
-    volumes:
-      {% for volume in env_json.apps[app_name].volumes | default([]) %}
-      - "{{ docker_admin_home | realpath }}/{{ app_name }}/{{ volume.host_path }}:{{ volume.container_path }}"
-      {% endfor %}
 
 networks:
   app_network:
