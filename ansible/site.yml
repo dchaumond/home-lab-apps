@@ -1,15 +1,20 @@
+---
 - name: Déployer les applications Docker
   hosts: apps_runners
   become: false
   tasks:
     - name: Lire .env.json
-      include_vars:
+      ansible.builtin.include_vars:
         file: "{{ playbook_dir }}/../.env.json"
         name: env_json
 
-    - include_role:
+    - name: Valider la présence d'applications sur l'hôte
+      ansible.builtin.meta: end_host
+      when: apps is undefined or (apps | length == 0)
+
+    - name: Exécuter le déploiement des applications spécifiques à l'hôte
+      ansible.builtin.include_role:
         name: docker_app_deploy
       loop: "{{ apps }}"
-      vars:
-        app_name: "{{ item }}"
-        docker_admin_home: "{{ env_json.docker_admin.apps_home }}"
+      loop_control:
+        loop_var: app_name

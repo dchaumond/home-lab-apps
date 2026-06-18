@@ -1,0 +1,46 @@
+# {{ app_name | capitalize }}
+
+## Description
+{{ env_json.apps[app_name].description | default("Application Docker déployée via Ansible.") }}
+
+## Détails Techniques
+- Image Docker : `{{ env_json.apps[app_name].image }}`
+- Mode Réseau : `{{ env_json.apps[app_name].network_mode | default('bridge') }}`
+
+{% if env_json.apps[app_name].ports is defined and env_json.apps[app_name].ports | length > 0 -%}
+- Ports exposés :
+  {% for port in env_json.apps[app_name].ports -%}
+  - `{{ port }}`
+  {% endfor %}
+{%- endif %}
+
+{% if env_json.apps[app_name].volumes is defined and env_json.apps[app_name].volumes | length > 0 -%}
+- Volumes montés :
+  {% for volume in env_json.apps[app_name].volumes -%}
+  - `{{ volume.host_path }}` → `{{ volume.container_path }}`
+  {% endfor %}
+{%- endif %}
+
+## Commandes de Gestion Local (Compose V2)
+| Action | Commande |
+| :--- | :--- |
+| Démarrer | docker compose -f {{ env_json.docker_admin.apps_home }}/{{ app_name }}/docker-compose.yml up -d |
+| Arrêter | docker compose -f {{ env_json.docker_admin.apps_home }}/{{ app_name }}/docker-compose.yml down |
+| Redémarrer | docker compose -f {{ env_json.docker_admin.apps_home }}/{{ app_name }}/docker-compose.yml restart |
+| Voir les logs | docker compose -f {{ env_json.docker_admin.apps_home }}/{{ app_name }}/docker-compose.yml logs -f --tail=100 |
+| Statut du projet | docker compose -f {{ env_json.docker_admin.apps_home }}/{{ app_name }}/docker-compose.yml ps |
+
+## Configuration & Environnement
+- Fichier racine : {{ env_json.docker_admin.apps_home }}/{{ app_name }}/docker-compose.yml
+
+{% if env_json.apps[app_name].env_vars is defined and env_json.apps[app_name].env_vars | length > 0 -%}
+Variables injectées :
+  {% for key, value in env_json.apps[app_name].env_vars.items() -%}
+  - {{ key }} = `{{ value }}`
+  {% endfor %}
+{%- else -%}
+Aucune variable d'environnement spécifique configurée.
+{%- endif %}
+
+## Support
+Pour toute question, contactez l'équipe DevOps.

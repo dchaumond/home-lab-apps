@@ -35,7 +35,38 @@ Tu dois REJETER ou CORRIGER immédiatement toute configuration qui :
 - Utilise le tag 'latest' pour les images Docker. Exige une version sémantique figée.
 - Stocke des mots de passe en clair dans le fichier `docker-compose.yml`. Use du fichier `.env`.
 
-### 4. VALIDATION DES FICHIERS YAML/JINJA2
+### 5. DÉPLOIEMENT SIMPLIFIÉ
+
+### 5.1. Commande Unique
+Utilisez le playbook `deploy_app.yml` pour déployer une application en une seule commande :
+```bash
+ansible-playbook deploy_app.yml --extra-vars "app_name=<nom_app> target_runner=<runner>"
+```
+
+### 5.2. Documentation Automatique
+- Un fichier `README.md` est généré automatiquement dans le répertoire de l'application.
+- Il contient :
+  - Une description de l'application.
+  - Les commandes pour gérer le conteneur (démarrer/arrêter/redémarrer).
+  - Les détails techniques (ports, volumes, variables d'environnement).
+
+### 5.3. Exemple de Déploiement
+```bash
+# Déployer Home Assistant sur apps-runner-ryzen
+ansible-playbook deploy_app.yml --extra-vars "app_name=homeassistant target_runner=apps-runner-ryzen"
+
+# Vérifier la documentation générée
+ansible apps-runner-ryzen -m shell -a "cat /home/docker-admin/apps/homeassistant/README.md"
+```
+
+### 5.4. Résolution des Problèmes
+| Problème                          | Solution                                                                                     |
+|-----------------------------------|----------------------------------------------------------------------------------------------|
+| **Application non définie**       | Vérifiez que `app_name` existe dans `.env.json`.                                            |
+| **README.md non généré**          | Vérifiez que le template `app_readme.j2` existe dans `roles/docker_app_deploy/templates/`.  |
+| **Erreur de syntaxe YAML**        | Validez le fichier `docker-compose.yml` avec `docker-compose config`.                       |
+
+## 6. VALIDATION DES FICHIERS YAML/JINJA2
 - **Avant toute soumission** :
   - Vérifie l'indentation (2 espaces, pas de tabs) avec `yamllint`.
   - Valide les templates Jinja2 avec `jinja2-lint`.
@@ -47,7 +78,13 @@ Exécute les demandes en affichant d'abord l'arborescence cible, puis les fichie
 # AGENTS.md
 
 > **Note à l'attention de l'Agent IA (OpenCode) :**
-> Ce document définit tes règles d'engagement, ton modèle de privilèges et la structure de données que tu dois impérativement respecter pour la maintenance et le déploiement des applications Docker sur l'infrastructure Ansible. Tout manquement à ces règles sera considéré comme une régression de code.
+> Ce document définit tes règles d'engagement, ton modèle de privilèges et la structure de données que tu dois impérativement respecter pour la maintenance et le déploiement des applications Docker sur l'infrastructure Ansible.
+>
+> **Avant toute intervention, tu dois :**
+> 1. Lire et comprendre le fichier [`RULES.md`](./RULES.md) qui décrit les conventions, règles de codage et bonnes pratiques pour ce dépôt.
+> 2. Appliquer strictement les règles décrites dans `RULES.md` pour toute modification ou déploiement.
+>
+> Tout manquement à ces règles sera considéré comme une régression de code.
 
 ---
 
@@ -64,6 +101,33 @@ Exécute les demandes en affichant d'abord l'arborescence cible, puis les fichie
 L'architecture Ansible sépare la *Logique de déploiement* (Rôles), la *Définition des applications* (Catalogue) et la *Distribution sur les infrastructures* (Inventaire). 
 
 Pour installer une application `toto` sur un runner spécifique, ou une application `tutu` sur plusieurs runners, tu ne dois pas modifier le rôle de déploiement. Tu dois **uniquement piloter le catalogue et le mapping dans l'inventaire**.
+
+#### **Mode de Travail**
+- **Ne jamais faire de modifications en mode build en cas d'échec sans ma validation** :
+  - Propose des modifications, mais attends ma validation avant de les appliquer.
+  - Exemple :
+    ```yaml
+    - name: Proposer une modification
+      ansible.builtin.command: "pct stop {{ secrets.apps_runner_ryzen.ct_id }}"
+      delegate_to: "{{ secrets.pve_host_ryzen }}"
+      become: true
+      when: false  # Proposer sans exécuter
+    ```
+
+#### **Gestion des Variables**
+- **Toutes les variables doivent être gérées dans `.env.json` à la racine du projet** :
+  - Aucune variable ne doit être définie en dur dans les fichiers de configuration (Terraform, Ansible, etc.).
+  - Exemple de `.env.json` :
+    ```json
+    {
+      "apps_runner_ryzen": {
+        "ct_id": 402,
+        "ip": "192.168.1.42/24"
+      },
+      "pve_host_ryzen": "pve-ryzen"
+    }
+    ```
+  - Utiliser `{{ secrets.<variable> }}` pour accéder aux variables dans les fichiers Ansible ou Terraform.
 
 ### Arborescence du Dépôt Ansible à maintenir :
 ```text
@@ -82,3 +146,4 @@ Pour installer une application `toto` sur un runner spécifique, ou une applicat
     └── apps_definitions/           # Catalogue des N applications (1 fichier par app)
         ├── app_toto.yml
         └── app_tutu.yml
+

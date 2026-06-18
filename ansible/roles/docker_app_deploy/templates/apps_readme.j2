@@ -1,0 +1,52 @@
+# Arborescence des Applications Docker
+
+Ce répertoire ({{ env_json.docker_admin.apps_home }}/) contient toutes les applications déployées via Ansible et Docker Compose.
+
+---
+
+## Applications Déployées
+
+Voici la liste des applications configurées sur ce runner :
+
+| Application | Image Docker | Mode Réseau | Ports / Subnet |
+| :--- | :--- | :--- | :--- |
+{% for app, config in env_json.apps.items() %}
+| **{{ app }}** | `{{ config.image }}` | `{{ config.network_mode | default('bridge') }}` | {% if config.network_mode is defined %}-{% elif config.ports is defined %}`{{ config.ports | join(', ') }}`{% else %}-{% endif %} |
+{% endfor %}
+
+---
+
+## Structure Standard
+Chaque application suit l'arborescence suivante :
+
+{{ env_json.docker_admin.apps_home }}/
+└── <nom_application>/
+    ├── docker-compose.yml    # Généré par Ansible (Ne pas modifier)
+    ├── README.md             # Spécifique à l'application
+    └── <volume_host_path>/   # Dossiers de volumes persistants
+
+---
+
+⚠️ Note Importante :
+- Le fichier .env.json n'est pas déployé sur ce runner. Il sert uniquement à la génération de l'infrastructure depuis la station de dev.
+- Les modifications manuelles des fichiers docker-compose.yml seront écrasées au prochain run Ansible.
+
+---
+
+## Commandes Utiles
+
+| Action | Commande |
+| :--- | :--- |
+| Lister les apps | ls -la {{ env_json.docker_admin.apps_home }}/ |
+| Démarrer une app | docker compose -f {{ env_json.docker_admin.apps_home }}/<app_name>/docker-compose.yml up -d |
+| Arrêter une app | docker compose -f {{ env_json.docker_admin.apps_home }}/<app_name>/docker-compose.yml down |
+| Voir les logs | docker compose -f {{ env_json.docker_admin.apps_home }}/<app_name>/docker-compose.yml logs -f --tail=100 |
+| Statut de l'app | docker compose -f {{ env_json.docker_admin.apps_home }}/<app_name>/docker-compose.yml ps |
+
+---
+
+## Permissions & Sécurité
+* Propriétaire : docker-admin (UID : {{ env_json.docker_admin.uid }})
+* Groupe : docker (Groupe système requis pour l'accès à la socket)
+* Droits appliqués par l'IaC : 2775 (drwxrwsr-x). Le bit SetGID (2) est obligatoire : il force tout fichier ou dossier créé manuellement dans ces répertoires à hériter automatiquement du groupe docker.
+* Règle absolue : Ne jamais utiliser chmod 777 ou exécuter des commandes docker en tant que root sous peine de casser l'idempotence des playbooks Ansible lors des vérifications de droits.

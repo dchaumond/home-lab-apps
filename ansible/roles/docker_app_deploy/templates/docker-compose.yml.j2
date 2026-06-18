@@ -1,31 +1,45 @@
-version: '3.8'
 services:
   {{ app_name }}:
-    image: {{ env_json.apps[app_name].image }}
-    container_name: {{ app_name }}
+    image: "{{ env_json.apps[app_name].image }}"
+    container_name: "{{ app_name }}"
     restart: unless-stopped
-{% if env_json.apps[app_name].env_vars | length > 0 %}
-    environment:
-{% for key, value in env_json.apps[app_name].env_vars.items() %}
-      {{ key }}: {{ value }}
+{% if env_json.apps[app_name].network_mode is defined %}
+    network_mode: "{{ env_json.apps[app_name].network_mode }}"
+{% elif env_json.apps[app_name].ports | default([]) | length > 0 %}
+    networks:
+      - app_network
+{% endif %}
+{% if env_json.apps[app_name].cap_add is defined and env_json.apps[app_name].cap_add | length > 0 %}
+    cap_add:
+{% for cap in env_json.apps[app_name].cap_add %}
+      - "{{ cap }}"
 {% endfor %}
 {% endif %}
+{% if env_json.apps[app_name].env_vars | default({}) | length > 0 %}
+    environment:
+{% for key, value in env_json.apps[app_name].env_vars.items() %}
+      - "{{ key }}={{ value }}"
+{% endfor %}
+{% endif %}
+{% if env_json.apps[app_name].network_mode is not defined and env_json.apps[app_name].ports | default([]) | length > 0 %}
     ports:
 {% for port in env_json.apps[app_name].ports %}
       - "{{ port }}"
 {% endfor %}
+{% endif %}
 {% if env_json.apps[app_name].volumes | default([]) | length > 0 %}
     volumes:
 {% for volume in env_json.apps[app_name].volumes %}
       - "{{ env_json.docker_admin.apps_home }}/{{ app_name }}/{{ volume.host_path }}:{{ volume.container_path }}"
 {% endfor %}
 {% endif %}
-    networks:
-      - app_network
+
+{% if env_json.apps[app_name].network_mode is not defined and env_json.apps[app_name].ports | default([]) | length > 0 %}
 
 networks:
   app_network:
     driver: bridge
     ipam:
       config:
-        - subnet: {{ env_json.networks.app_network.subnet }}
+        - subnet: "{{ env_json.networks.app_network.subnet }}"
+{% endif %}

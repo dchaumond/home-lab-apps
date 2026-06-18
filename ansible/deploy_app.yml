@@ -1,0 +1,21 @@
+---
+- name: Déployer une application Docker
+  hosts: "{{ target_runner }}"
+  become: false
+  tasks:
+    - name: Lire .env.json
+      ansible.builtin.include_vars:
+        file: "{{ playbook_dir }}/../.env.json"
+        name: env_json
+
+    - name: Vérifier que l'application est définie dans .env.json
+      ansible.builtin.fail:
+        msg: "L'application {{ app_name }} n'est pas définie dans .env.json"
+      when: env_json.apps[app_name] is undefined
+
+    - name: Déployer l'application
+      ansible.builtin.import_role:
+        name: docker_app_deploy
+      # Les variables globales (app_name et env_json) sont automatiquement
+      # transmises au rôle sans avoir besoin de les déclarer dans un bloc vars:
+      tags: always

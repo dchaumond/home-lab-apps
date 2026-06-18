@@ -1,15 +1,15 @@
-
-
+---
 - name: Créer le répertoire parent de l'application
-  file:
+  ansible.builtin.file:
     path: "{{ env_json.docker_admin.apps_home | realpath }}/{{ app_name }}"
     state: directory
     owner: docker-admin
     group: docker
-    mode: "2775"  # SetGID + rwxrwxr-x
+    mode: "2775"
+  tags: always  # SetGID + rwxrwxr-x
 
 - name: Créer les sous-répertoires de volumes
-  file:
+  ansible.builtin.file:
     path: "{{ env_json.docker_admin.apps_home | realpath }}/{{ app_name }}/{{ volume_item.host_path }}"
     state: directory
     owner: docker-admin
@@ -20,15 +20,42 @@
     loop_var: volume_item
 
 - name: Déployer le docker-compose.yml
-  template:
+  ansible.builtin.template:
     src: docker-compose.yml.j2
-    dest: "{{ docker_admin_home | realpath }}/{{ app_name }}/docker-compose.yml"
+    dest: "{{ env_json.docker_admin.apps_home | realpath }}/{{ app_name }}/docker-compose.yml"
     owner: docker-admin
     group: docker
+    mode: "0644"
+
+- name: Forcer le redéploiement (suppression du conteneur existant)
+  ansible.builtin.command: docker compose down
+  args:
+    chdir: "{{ env_json.docker_admin.apps_home | realpath }}/{{ app_name }}"
+  register: docker_compose_down
+  failed_when: false
+  changed_when:
+    - "'Removing' in docker_compose_down.stderr or 'Removing' in docker_compose_down.stdout"
 
 - name: Démarrer l'application
-  ansible.builtin.command: docker-compose up -d --remove-orphans
+  ansible.builtin.command: docker compose up -d --remove-orphans
   args:
-    chdir: "{{ docker_admin_home | realpath }}/{{ app_name }}"
+    chdir: "{{ env_json.docker_admin.apps_home | realpath }}/{{ app_name }}"
   register: docker_compose_up
-  changed_when: "'Creating' in docker_compose_up.stdout or 'Recreating' in docker_compose_up.stdout"
+  changed_when:
+    - "'Creating' in docker_compose_up.stderr or 'Recreating' in docker_compose_up.stderr or 'Starting' in docker_compose_up.stderr"
+
+- name: Générer le README.md de l'application
+  ansible.builtin.template:
+    src: app_readme.j2
+    dest: "{{ env_json.docker_admin.apps_home | realpath }}/{{ app_name }}/README.md"
+    owner: docker-admin
+    group: docker
+    mode: "0644"
+
+- name: Générer le README.md global pour les applications
+  ansible.builtin.template:
+    src: apps_readme.j2
+    dest: "{{ env_json.docker_admin.apps_home | realpath }}/README.md"
+    owner: docker-admin
+    group: docker
+    mode: "0644"
