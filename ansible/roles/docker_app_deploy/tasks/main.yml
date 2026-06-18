@@ -10,15 +10,16 @@
 
 - name: Créer les sous-répertoires de volumes
   ansible.builtin.file:
-    path: "{{ env_json.docker_admin.apps_home | realpath }}/{{ app_name }}/{{ volume_item.host_path }}"
+    path: "{{ env_json.docker_admin.apps_home }}/{{ app_name }}/{{ item.host_path }}"
     state: directory
-    owner: docker-admin
-    group: docker
-    mode: "2775"  # SetGID + rwxrwxr-x (permet l'écriture au groupe docker)
+    owner: "{{ item.owner | default('docker-admin') }}"
+    group: "{{ item.group | default('docker-admin') }}"
+    mode: "0775"
   loop: "{{ env_json.apps[app_name].volumes | default([]) }}"
   loop_control:
-    loop_var: volume_item
-
+    loop_var: item
+  become: true # <--- Requis pour exécuter le chown vers l'UID 1883
+  
 - name: Déployer le docker-compose.yml
   ansible.builtin.template:
     src: docker-compose.yml.j2

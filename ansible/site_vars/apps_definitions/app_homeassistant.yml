@@ -1,6 +1,0 @@
-app_name: homeassistant
-image: "{{ secrets.apps.homeassistant.image }}"
-network_mode: "{{ secrets.apps.homeassistant.network_mode }}"
-cap_add: "{{ secrets.apps.homeassistant.cap_add }}"
-volumes: "{{ secrets.apps.homeassistant.volumes }}"
-env_vars: "{{ secrets.apps.homeassistant.env_vars | combine({'PUID': secrets.docker_admin.uid, 'PGID': secrets.docker_admin.gid}) }}"
