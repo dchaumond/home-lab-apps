@@ -112,12 +112,12 @@ Ce dépôt gère le déploiement d'applications conteneurisées sur une infrastr
 #### **Commande** :
 ```bash
 cd /home/dch/projects/home-lab-apps/ansible
-ansible-playbook site.yml --limit <runner> --tags <app_name>
+ansible-playbook site.yml --limit <runner> -e '{"apps": [<runner>]}'
 ```
 
 #### **Exemple** (déployer `votre_app` sur `apps-runner-ryzen`) :
 ```bash
-ansible-playbook site.yml --limit apps-runner-ryzen --tags votre_app
+ansible-playbook site.yml --limit apps-runner-ryzen -e '{"apps": ["mosquitto"]}'
 ```
 
 #### **Vérification** :
