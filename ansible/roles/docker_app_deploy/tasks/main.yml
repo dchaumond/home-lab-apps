@@ -13,12 +13,12 @@
     path: "{{ env_json.docker_admin.apps_home }}/{{ app_name }}/{{ item.host_path }}"
     state: directory
     owner: "{{ item.owner | default('docker-admin') }}"
-    group: "{{ item.group | default('docker-admin') }}"
-    mode: "0775"
+    group: docker
+    mode: "2775"
   loop: "{{ env_json.apps[app_name].volumes | default([]) }}"
   loop_control:
     loop_var: item
-  become: true # <--- Requis pour exécuter le chown vers l'UID 1883
+  become: true
   
 - name: Déployer le docker-compose.yml
   ansible.builtin.template:
