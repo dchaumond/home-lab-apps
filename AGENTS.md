@@ -7,7 +7,6 @@ Toute application, configuration ou pile Docker Compose doit impérativement res
 - Chemin de base : `/home/docker-admin/apps/`
 - Répertoire par application : `/home/docker-admin/apps/<nom-application>/`
   ├── docker-compose.yml
-  ├── .env.json
   └── data/                  # TOUS les volumes persistants nommés ou liés doivent pointer ici
 
 ### 2. PROTOCOLE OPÉRATIONNEL (Workflow obligatoire)
@@ -35,22 +34,22 @@ Tu dois REJETER ou CORRIGER immédiatement toute configuration qui :
 - Utilise le tag 'latest' pour les images Docker. Exige une version sémantique figée.
 - Stocke des mots de passe en clair dans le fichier `docker-compose.yml`. Use du fichier `.env`.
 
-### 5. DÉPLOIEMENT SIMPLIFIÉ
+### 4. DÉPLOIEMENT SIMPLIFIÉ
 
-### 5.1. Commande Unique
+### 4.1. Commande Unique
 Utilisez le playbook `deploy_app.yml` pour déployer une application en une seule commande :
 ```bash
 ansible-playbook deploy_app.yml --extra-vars "app_name=<nom_app> target_runner=<runner>"
 ```
 
-### 5.2. Documentation Automatique
+### 4.2. Documentation Automatique
 - Un fichier `README.md` est généré automatiquement dans le répertoire de l'application.
 - Il contient :
   - Une description de l'application.
   - Les commandes pour gérer le conteneur (démarrer/arrêter/redémarrer).
   - Les détails techniques (ports, volumes, variables d'environnement).
 
-### 5.3. Exemple de Déploiement
+### 4.3. Exemple de Déploiement
 ```bash
 # Déployer Home Assistant sur apps-runner-ryzen
 ansible-playbook deploy_app.yml --extra-vars "app_name=homeassistant target_runner=apps-runner-ryzen"
@@ -59,12 +58,12 @@ ansible-playbook deploy_app.yml --extra-vars "app_name=homeassistant target_runn
 ansible apps-runner-ryzen -m shell -a "cat /home/docker-admin/apps/homeassistant/README.md"
 ```
 
-### 5.4. Résolution des Problèmes
+### 4.4. Résolution des Problèmes
 | Problème                          | Solution                                                                                     |
 |-----------------------------------|----------------------------------------------------------------------------------------------|
 | **Application non définie**       | Vérifiez que `app_name` existe dans `.env.json`.                                            |
 | **README.md non généré**          | Vérifiez que le template `app_readme.j2` existe dans `roles/docker_app_deploy/templates/`.  |
-| **Erreur de syntaxe YAML**        | Validez le fichier `docker-compose.yml` avec `docker-compose config`.                       |
+| **Erreur de syntaxe YAML**        | Validez le fichier `docker-compose.yml` avec `docker compose config`.                       |
 
 ## 6. VALIDATION DES FICHIERS YAML/JINJA2
 - **Avant toute soumission** :
@@ -115,19 +114,14 @@ Pour installer une application `toto` sur un runner spécifique, ou une applicat
     ```
 
 #### **Gestion des Variables**
-- **Toutes les variables doivent être gérées dans `.env.json` à la racine du projet** :
-  - Aucune variable ne doit être définie en dur dans les fichiers de configuration (Terraform, Ansible, etc.).
-  - Exemple de `.env.json` :
-    ```json
-    {
-      "apps_runner_ryzen": {
-        "ct_id": 402,
-        "ip": "192.168.1.42/24"
-      },
-      "pve_host_ryzen": "pve-ryzen"
-    }
+- **Toutes les variables sont gérées dans `.env.json` à la racine du projet** :
+  - Aucune variable ne doit être définie en dur dans les fichiers de configuration (Ansible, templates, etc.).
+  - Les données de `.env.json` sont chargées par le playbook via `include_vars` sous le namespace `env_json`.
+  - Exemple d'accès dans un template :
+    ```jinja2
+    image: "{{ env_json.apps[app_name].image }}"
     ```
-  - Utiliser `{{ secrets.<variable> }}` pour accéder aux variables dans les fichiers Ansible ou Terraform.
+  - Variables d'inventaire (runner, apps list) définies dans `hosts.yml`.
 
 ### Arborescence du Dépôt Ansible à maintenir :
 ```text
@@ -137,13 +131,10 @@ Pour installer une application `toto` sur un runner spécifique, ou une applicat
 ├── AGENTS.md                       # Ce fichier de consignes
 ├── inventories/
 │   └── production/
-│       ├── hosts.yml               # Mapping : Quel Runner (M) héberge quelle(s) App(s) (N)
-│       └── group_vars/
-│           └── apps_runners.yml    # Configuration globale des runners
+│       ├── hosts.yml               # Mapping : Quel Runner héberge quelle(s) App(s)
+│       └── group_vars/             # (optionnel) Variables globales des runners
 ├── roles/
 │   └── docker_app_deploy/          # Rôle générique (Tasks & Templates)
-└── site_vars/
-    └── apps_definitions/           # Catalogue des N applications (1 fichier par app)
-        ├── app_toto.yml
-        └── app_tutu.yml
+└── .env.json                       # Source de vérité : définitions des applications
+```
 

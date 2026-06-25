@@ -1,5 +1,0 @@
----
-# Variables temporaires (écrasées par .env.json)
-ansible_ssh_private_key: ""
-ansible_user: "docker-admin"
-# Variable déplacée dans .env.json sous docker_admin.apps_home

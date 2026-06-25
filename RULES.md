@@ -20,10 +20,9 @@ Ce document décrit les conventions, règles et apprentissages clés pour travai
 │   │       └── templates/   # Templates Jinja2 pour générer:
 │   │           ├── docker-compose.yml.j2  # Fichier Docker Compose généré
 │   │           └── app_readme.j2          # Documentation générée (README.md)
-│   ├── site_vars/
-│   │   └── apps_definitions/ # Définitions des applications (app_<nom>.yml)
-│   ├── deploy_app.yml       # Playbook de déploiement
+│   ├── deploy_app.yml       # Playbook de déploiement d'une app
 │   └── site.yml            # Playbook maître
+├── .env.json               # Source de vérité (définitions des applications)
 ├── RULES.md                # Ce fichier
 └── AGENTS.md               # Instructions pour les agents IA
 ```
@@ -111,19 +110,15 @@ Ce document décrit les conventions, règles et apprentissages clés pour travai
     ```
   - **Ne jamais** modifier manuellement les fichiers sur les runners. Tout changement doit passer par Ansible.
 
-### 2.3 `ansible/site_vars/apps_definitions/app_<nom>.yml`
-- **Rôle** : Définit les paramètres spécifiques à une application (utilise les variables de `.env.json`).
-- **Règles** :
-  - Toujours référencer les variables de `.env.json` via `{{ secrets.<chemin> }}`.
-  - Exemple pour `homeassistant` :
-    ```yaml
-    app_name: homeassistant
-    image: "{{ secrets.apps.homeassistant.image }}"
-    network_mode: "{{ secrets.apps.homeassistant.network_mode }}"
-    cap_add: "{{ secrets.apps.homeassistant.cap_add }}"
-    volumes: "{{ secrets.apps.homeassistant.volumes }}"
-    env_vars: "{{ secrets.apps.homeassistant.env_vars }}"
-    ```
+### 2.3 `.env.json` — Source de vérité des applications
+- **Rôle** : Fichier central unique définissant **toutes** les applications (image, ports, volumes, variables).
+- **Accès dans les templates** : Via `env_json.apps[app_name].<champ>`.
+- **Déploiement** : Ce fichier reste local. Les playbooks le chargent avec `include_vars` et le namespace `env_json`.
+- **Exemple** :
+  ```jinja2
+  image: "{{ env_json.apps[app_name].image }}"
+  ports: "{{ env_json.apps[app_name].ports }}"
+  ```
 
 ### 2.4 Templates Jinja2 (`roles/docker_app_deploy/templates/`)
 - **Rôle** : Génèrent les fichiers `docker-compose.yml` et `README.md` pour chaque application.

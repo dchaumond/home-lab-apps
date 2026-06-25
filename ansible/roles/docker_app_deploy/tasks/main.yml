@@ -31,6 +31,7 @@
     owner: docker-admin
     group: docker
     mode: "0644"
+  register: deploy_template
 
 - name: Valider la syntaxe du docker-compose.yml
   ansible.builtin.command: docker compose config
@@ -56,6 +57,7 @@
   changed_when: >-
     'Removing' in docker_compose_down.stderr
     or 'Removing' in docker_compose_down.stdout
+  when: deploy_template is changed or compose_pull is changed
 
 - name: Démarrer l'application
   ansible.builtin.command: docker compose up -d --remove-orphans
@@ -66,15 +68,20 @@
     'Creating' in docker_compose_up.stderr
     or 'Recreating' in docker_compose_up.stderr
     or 'Starting' in docker_compose_up.stderr
+  when: deploy_template is changed or compose_pull is changed
 
-- name: Vérifier le statut du conteneur
+- name: Attendre que le conteneur soit opérationnel
   ansible.builtin.command: docker compose ps --format json
   args:
     chdir: "{{ app_dir }}"
-  register: compose_ps
+  register: compose_health
   changed_when: false
-  failed_when:
-    - compose_ps.stdout | length == 0 or compose_ps.stdout == '[]'
+  failed_when: false
+  until: >-
+    compose_health.stdout | length > 2
+    and 'running' in compose_health.stdout
+  retries: 10
+  delay: 3
 
 - name: Générer le README.md de l'application
   ansible.builtin.template:

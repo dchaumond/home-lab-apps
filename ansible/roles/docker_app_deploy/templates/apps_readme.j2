@@ -10,7 +10,8 @@ Voici la liste des applications configurées sur ce runner :
 
 | Application | Image Docker | Mode Réseau | Ports / Subnet |
 | :--- | :--- | :--- | :--- |
-{% for app, config in env_json.apps.items() %}
+{% for app in (apps | default([app_name])) %}
+{% set config = env_json.apps[app] %}
 | **{{ app }}** | `{{ config.image }}` | `{{ config.network_mode | default('bridge') }}` | {% if config.network_mode is defined %}-{% elif config.ports is defined %}`{{ config.ports | join(', ') }}`{% else %}-{% endif %} |
 {% endfor %}
 
