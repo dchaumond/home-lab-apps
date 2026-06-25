@@ -195,7 +195,7 @@ Ce document décrit les conventions, règles et apprentissages clés pour travai
      ansible <runner> -m shell -a "docker logs <app_name>"
      ```
 
-### 3.2 Sécurité
+### 3.3 Sécurité
 - **Interdictions** :
   - ❌ **Jamais** utiliser `sudo` ou `root` pour les opérations Docker.
   - ❌ **Jamais** monter `/var/run/docker.sock` dans un conteneur (sauf agents de monitoring validés).
@@ -205,7 +205,7 @@ Ce document décrit les conventions, règles et apprentissages clés pour travai
   - Les répertoires de volumes (`data/`) doivent appartenir à `docker-admin:docker` (UID/GID 1000).
   - Utiliser `chmod 770` pour les répertoires persistants (jamais `777`).
 
-### 3.3 Résolution des Problèmes
+### 3.4 Résolution des Problèmes
 | Problème                          | Solution                                                                                     |
 |-----------------------------------|----------------------------------------------------------------------------------------------|
 | **Erreur YAML**                   | Valider avec `yamllint` et `docker-compose config`. Vérifier les sauts de ligne et l'indentation. |
@@ -213,6 +213,26 @@ Ce document décrit les conventions, règles et apprentissages clés pour travai
 | **Permissions sur les volumes**   | `chown docker-admin:docker /home/docker-admin/apps/<app_name>/data && chmod 770 data`      |
 | **Image Docker introuvable**      | Vérifier le nom/tag de l'image dans `.env.json`.                                            |
 | **Variables manquantes**          | Vérifier que toutes les variables sont définies dans `.env.json`.                          |
+
+### 3.5 Règles de Validation pour les Agents IA
+
+#### 3.5.1 Validation avant modification
+- **Toujours demander la validation de l'utilisateur avant d'exécuter des modifications** sur :
+  - Les fichiers de configuration (`tasks/main.yml`, `docker-compose.yml.j2`, etc.).
+  - Les templates Jinja2.
+  - Les variables partagées (`.env.json`, `hosts.yml`, group_vars).
+  - Les playbooks (`site.yml`, `deploy_app.yml`).
+- **Exception** : Les corrections cosmétiques (trailing spaces, newlines, linting) peuvent être appliquées sans validation, mais doivent être mentionnées.
+
+#### 3.5.2 Vérification du bon fonctionnement après modification
+Après **toute modification** de code, de tâches, de templates ou de playbooks, l'agent doit impérativement exécuter les vérifications suivantes :
+1. **Syntaxe YAML** : `yamllint` sur tous les fichiers modifiés — **0 erreur tolérée**.
+2. **Syntaxe Ansible** : `ansible-playbook --syntax-check` avec l'inventaire de production.
+3. **Validation de l'inventaire** : `ansible-inventory --list` pour vérifier le mapping apps/runners.
+4. **Liste des tâches** : `ansible-playbook --list-tasks` pour confirmer l'enchaînement correct.
+5. **Rendu Jinja2** : Tester le rendu des templates avec `ansible` ou `python3/jinja2` pour détecter les variables non définies.
+
+Toute vérification qui échoue doit être corrigée avant que le changement ne soit proposé pour commit.
 
 ---
 
