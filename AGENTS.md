@@ -65,7 +65,7 @@ ansible apps-runner-ryzen -m shell -a "cat /home/docker-admin/apps/homeassistant
 | **README.md non généré**          | Vérifiez que le template `app_readme.j2` existe dans `roles/docker_app_deploy/templates/`.  |
 | **Erreur de syntaxe YAML**        | Validez le fichier `docker-compose.yml` avec `docker compose config`.                       |
 
-## 6. VALIDATION DES FICHIERS YAML/JINJA2
+## 5. VALIDATION DES FICHIERS YAML/JINJA2
 - **Avant toute soumission** :
   - Vérifie l'indentation (2 espaces, pas de tabs) avec `yamllint`.
   - Valide les templates Jinja2 avec `jinja2-lint`.
@@ -84,6 +84,54 @@ Exécute les demandes en affichant d'abord l'arborescence cible, puis les fichie
 > 2. Appliquer strictement les règles décrites dans `RULES.md` pour toute modification ou déploiement.
 >
 > Tout manquement à ces règles sera considéré comme une régression de code.
+
+---
+
+## BASE DE CONNAISSANCES DU DÉPÔT
+
+> Ces informations sont maintenues à jour pour éviter à l'agent de devoir redécouvrir le dépôt à chaque session.
+
+### Runners et Applications Actuels
+
+| Runner | Apps déployées |
+|---|---|
+| `apps-runner-ryzen` | `hello` (nginx test, bridge, port 8080) |
+| `ha-runner-ryzen` | `homeassistant` (domotique, host networking), `mosquitto` (MQTT, bridge) |
+
+### Flux des Variables
+
+1. **`.env.json`** → chargé comme `env_json` par `include_vars` (namespace `env_json`)
+2. **`hosts.yml`** → définit `apps` (liste par hôte) → itéré dans `site.yml` via `loop_var: app_name`
+3. **`deploy_app.yml`** → reçoit `app_name` + `target_runner` via `--extra-vars`
+
+### Cycle de Déploiement (implémenté dans `tasks/main.yml`)
+
+| Étape | Action | Condition |
+|---|---|---|
+| 1 | `set_fact app_dir` | |
+| 2 | Création répertoires + volumes (mode `2775`) | |
+| 3 | Template `docker-compose.yml` | `register: deploy_template` |
+| 4 | `docker compose config` | |
+| 5 | `docker compose pull` | `register: compose_pull` |
+| 6 | `docker compose down` | `when: deploy_template changed or compose_pull changed` |
+| 7 | `docker compose up -d --remove-orphans` | `when: deploy_template changed or compose_pull changed` |
+| 8 | Healthcheck `compose ps` | `until/retries:10/delay:3` avec `'running' in stdout` |
+| 9 | README.md (app + global) | |
+
+### Patterns Critiques à Réutiliser
+
+- **Idempotence** : `when: deploy_template is changed or compose_pull is changed` → skip redéploiement si rien n'a changé
+- **Filtrage runner** : `apps | default([app_name])` dans les templates pour lister uniquement les apps du runner
+- **Healthcheck** : `until/retries:10/delay:3` sur `docker compose ps --format json`
+- **Permissions** : `2775` (SetGID), `owner: docker-admin`, `group: docker`
+
+### Points d'Attention
+
+- `.env.json` est **gitignored** → les changements locaux ne sont pas suivis par git
+- `group_vars/*.yml` peuvent être supprimés s'ils sont vides
+- `site_vars/apps_definitions/` n'existe pas → tout est centralisé dans `.env.json`
+- Les templates `.j2` échouent au `yamllint` (syntaxe Jinja2) → ne pas s'en inquiéter
+- Le dépôt ne contient **pas** de Terraform/Packer → tout est Ansible pur
 
 ---
 

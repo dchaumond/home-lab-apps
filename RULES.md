@@ -43,6 +43,7 @@ Ce document décrit les conventions, règles et apprentissages clés pour travai
 - **Permissions** :
   - `data/` : `chown docker-admin:docker && chmod 770`.
   - `docker-compose.yml` : `644` (lecture seule pour `docker-admin`).
+- **Nettoyage** : Les fichiers `group_vars/*.yml` vides ou contenant uniquement des commentaires peuvent être supprimés. Ansible les ignore s'ils sont absents.
 
 ### Détails des Templates Jinja2
 - **Emplacement** : `ansible/roles/docker_app_deploy/templates/`
@@ -80,7 +81,8 @@ Ce document décrit les conventions, règles et apprentissages clés pour travai
       }
     }
     ```
-  - **Exemple d'exclusion Git** : Ajouter `.env.json` dans `.gitignore.
+  - **Exemple d'exclusion Git** : Ajouter `.env.json` dans `.gitignore`.
+- **Attention** : `.env.json` est exclu de Git. Les modifications locales (versions d'images, variables) ne sont **pas suivies** par Git et doivent être propagées manuellement ou sauvegardées séparément.
 
 ### 2.2 `ansible/inventories/production/hosts.yml`
 - **Rôle** : Définit **quel runner héberge quelle application**.
@@ -129,6 +131,12 @@ Ce document décrit les conventions, règles et apprentissages clés pour travai
     - Utiliser des guillemets pour les valeurs contenant des caractères spéciaux (ex: `"{{ value }}"`).
   - **Variables** :
     - Toujours référencer `.env.json` via `env_json.<chemin>`.
+    - Pour filtrer les applications par runner dans les templates : utiliser `apps | default([app_name])` (la variable `apps` provient de `hosts.yml`, avec fallback sur `[app_name]` pour `deploy_app.yml`).
+    - Exemple pour lister les apps du runner :
+      ```jinja2
+      {% for app in (apps | default([app_name])) %}
+      {% set config = env_json.apps[app] %}
+      ```
     - Exemple pour les volumes :
       ```jinja2
       volumes:
@@ -152,16 +160,39 @@ Ce document décrit les conventions, règles et apprentissages clés pour travai
   - Les conteneurs sont **recréés uniquement si nécessaire** (ex: changement d'image ou de configuration).
   - Les permissions et répertoires ne sont **pas modifiés** s'ils sont déjà corrects.
 - **Outils** :
-  - Utiliser les modules Ansible `template`, `file`, et `docker-compose` pour garantir l'idempotence.
-  - Éviter les commandes shell brutes (ex: `docker-compose down && docker-compose up -d`). Préférer les modules dédiés.
-  - **Exemple** :
+  - Utiliser les modules Ansible `template`, `file` pour garantir l'idempotence.
+  - Les tâches `down`/`up` sont conditionnées au changement du template ou de l'image :
     ```yaml
+    - name: Déployer le docker-compose.yml
+      ansible.builtin.template:
+        src: docker-compose.yml.j2
+        dest: "{{ app_dir }}/docker-compose.yml"
+      register: deploy_template
+
+    - name: Récupérer les images Docker
+      ansible.builtin.command: docker compose pull
+      register: compose_pull
+
+    - name: Forcer le redéploiement
+      ansible.builtin.command: docker compose down
+      when: deploy_template is changed or compose_pull is changed
+
     - name: Démarrer l'application
-      ansible.builtin.command: docker-compose up -d --remove-orphans
-      args:
-        chdir: "{{ env_json.docker_admin.apps_home | realpath }}/{{ app_name }}"
-      register: docker_compose_up
-      changed_when: "'Creating' in docker_compose_up.stdout or 'Recreating' in docker_compose_up.stdout"
+      ansible.builtin.command: docker compose up -d --remove-orphans
+      when: deploy_template is changed or compose_pull is changed
+    ```
+  - Healthcheck post-déploiement avec nouvelle tentative automatique :
+    ```yaml
+    - name: Attendre que le conteneur soit opérationnel
+      ansible.builtin.command: docker compose ps --format json
+      register: compose_health
+      changed_when: false
+      failed_when: false
+      until: >-
+        compose_health.stdout | length > 2
+        and 'running' in compose_health.stdout
+      retries: 10
+      delay: 3
     ```
 
 ### 3.2 Workflow de Déploiement (Local → Runner)
