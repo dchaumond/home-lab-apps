@@ -41,5 +41,5 @@ networks:
     driver: bridge
     ipam:
       config:
-        - subnet: "{{ env_json.networks.app_network.subnet }}"
+        - subnet: "{{ env_json.docker_networks.app_network.subnet }}"
 {% endif %}
