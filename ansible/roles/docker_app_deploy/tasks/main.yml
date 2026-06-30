@@ -16,8 +16,8 @@
   ansible.builtin.file:
     path: "{{ app_dir }}/{{ item.host_path }}"
     state: directory
-    owner: "{{ item.owner | default('docker-admin') }}"
-    group: docker
+    owner: "{{ env_json.apps[app_name].vol_owner | default('docker-admin') }}"
+    group: "{{ env_json.apps[app_name].vol_group | default('docker') }}"
     mode: "2775"
   loop: "{{ env_json.apps[app_name].volumes | default([]) }}"
   loop_control:
