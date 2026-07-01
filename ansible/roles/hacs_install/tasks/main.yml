@@ -1,0 +1,59 @@
+---
+- name: Définir les répertoires HACS
+  ansible.builtin.set_fact:
+    hacs_data_dir: "{{ app_dir }}/data"
+    hacs_target_dir: "{{ app_dir }}/data/custom_components/hacs"
+    hacs_download_url: "https://github.com/hacs/integration/releases/latest/download/hacs.zip"
+
+- name: Vérifier si HACS est déjà installé
+  ansible.builtin.stat:
+    path: "{{ hacs_target_dir }}/manifest.json"
+  register: hacs_manifest
+
+- name: Installer unzip
+  ansible.builtin.apt:
+    name: unzip
+    state: present
+  become: true
+  when: not hacs_manifest.stat.exists
+
+- name: Créer le répertoire custom_components/hacs
+  ansible.builtin.file:
+    path: "{{ hacs_target_dir }}"
+    state: directory
+    owner: "{{ env_json.apps[app_name].vol_owner | default('docker-admin') }}"
+    group: "{{ env_json.apps[app_name].vol_group | default('docker') }}"
+    mode: "2775"
+  become: true
+  when: not hacs_manifest.stat.exists
+
+- name: Télécharger HACS depuis GitHub
+  ansible.builtin.get_url:
+    url: "{{ hacs_download_url }}"
+    dest: "{{ hacs_target_dir }}/hacs.zip"
+    mode: "0644"
+  become: true
+  when: not hacs_manifest.stat.exists
+
+- name: Extraire HACS dans custom_components/hacs
+  ansible.builtin.unarchive:
+    src: "{{ hacs_target_dir }}/hacs.zip"
+    dest: "{{ hacs_target_dir }}"
+    remote_src: true
+  become: true
+  when: not hacs_manifest.stat.exists
+
+- name: Supprimer l'archive zip
+  ansible.builtin.file:
+    path: "{{ hacs_target_dir }}/hacs.zip"
+    state: absent
+  become: true
+  when: not hacs_manifest.stat.exists
+
+- name: Redémarrer le conteneur Home Assistant
+  ansible.builtin.command: docker compose restart {{ app_name }}
+  args:
+    chdir: "{{ app_dir }}"
+  register: hacs_restart
+  changed_when: true
+  when: not hacs_manifest.stat.exists

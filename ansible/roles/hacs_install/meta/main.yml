@@ -1,0 +1,6 @@
+---
+galaxy_info:
+  role_name: hacs_install
+  description: Installe HACS (Home Assistant Community Store) dans un conteneur Home Assistant
+  author: home-lab-apps
+dependencies: []

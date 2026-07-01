@@ -19,3 +19,9 @@
       # Les variables globales (app_name et env_json) sont automatiquement
       # transmises au rôle sans avoir besoin de les déclarer dans un bloc vars:
       tags: always
+
+    - name: Installer HACS pour Home Assistant
+      ansible.builtin.import_role:
+        name: hacs_install
+      when: env_json.apps[app_name].hacs_install | default(false)
+      tags: always
