@@ -24,6 +24,13 @@
     loop_var: item
   become: true
 
+- name: Activer le démarrage automatique de Docker au boot du LXC
+  ansible.builtin.systemd:
+    name: docker.service
+    enabled: true
+    state: started
+  become: true
+
 - name: Déployer le docker-compose.yml
   ansible.builtin.template:
     src: docker-compose.yml.j2
