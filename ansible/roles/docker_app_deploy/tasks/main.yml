@@ -31,6 +31,34 @@
     state: started
   become: true
 
+- name: Déployer la configuration DNS du daemon Docker
+  ansible.builtin.template:
+    src: daemon.json.j2
+    dest: /etc/docker/daemon.json
+    owner: root
+    group: root
+    mode: "0644"
+  register: daemon_config
+  become: true
+
+- name: Redémarrer Docker si la configuration DNS a changé
+  ansible.builtin.systemd:
+    name: docker.service
+    state: restarted
+  when: daemon_config is changed
+  become: true
+
+- name: Attendre que Docker soit opérationnel après redémarrage
+  ansible.builtin.command: docker info
+  register: docker_ready
+  changed_when: false
+  failed_when: false
+  until: docker_ready.rc == 0
+  retries: 10
+  delay: 3
+  when: daemon_config is changed
+  become: true
+
 - name: Déployer le docker-compose.yml
   ansible.builtin.template:
     src: docker-compose.yml.j2
