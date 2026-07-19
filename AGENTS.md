@@ -51,11 +51,11 @@ ansible-playbook deploy_app.yml --extra-vars "app_name=<nom_app> target_runner=<
 
 ### 4.3. Exemple de Déploiement
 ```bash
-# Déployer Home Assistant sur apps-runner-ryzen
-ansible-playbook deploy_app.yml --extra-vars "app_name=homeassistant target_runner=apps-runner-ryzen"
+# Déployer Hello World sur apps-runner-ryzen
+ansible-playbook deploy_app.yml --extra-vars "app_name=hello target_runner=apps-runner-ryzen"
 
 # Vérifier la documentation générée
-ansible apps-runner-ryzen -m shell -a "cat /home/docker-admin/apps/homeassistant/README.md"
+ansible apps-runner-ryzen -m shell -a "cat /home/docker-admin/apps/hello/README.md"
 ```
 
 ### 4.4. Résolution des Problèmes
@@ -96,7 +96,7 @@ Exécute les demandes en affichant d'abord l'arborescence cible, puis les fichie
 | Runner | Apps déployées |
 |---|---|
 | `apps-runner-ryzen` | `hello` (nginx test, bridge, port 8080) |
-| `ha-runner-ryzen` | `homeassistant` (domotique, host networking), `mosquitto` (MQTT, bridge) |
+| `home-automation-ryzen` | `home-assistant` (domotique, host networking), `mosquitto` (MQTT, bridge) |
 
 ### Flux des Variables
 

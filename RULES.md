@@ -321,15 +321,15 @@ Toute vérification qui échoue doit être corrigée avant que le changement ne 
 ansible-playbook ansible/deploy_app.yml --extra-vars "app_name=hello target_runner=apps-runner-ryzen"
 ```
 
-### 5.2 Déploiement de `homeassistant`
+### 5.2 Déploiement de `home-assistant`
 ```bash
-ansible-playbook ansible/deploy_app.yml --extra-vars "app_name=homeassistant target_runner=ha-runner-ryzen"
+ansible-playbook ansible/deploy_app.yml --extra-vars "app_name=home-assistant target_runner=home-automation-ryzen"
 ```
 
 ### 5.3 Vérification des Conteneurs
 ```bash
 ansible apps-runner-ryzen -m shell -a "docker ps | grep hello"
-ansible ha-runner-ryzen -m shell -a "docker ps | grep homeassistant"
+ansible home-automation-ryzen -m shell -a "docker ps | grep home-assistant"
 ```
 
 ---
