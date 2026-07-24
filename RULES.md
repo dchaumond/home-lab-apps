@@ -34,14 +34,14 @@ Ce document décrit les conventions, règles et apprentissages clés pour travai
   /home/docker-admin/apps/
   └── <app_name>/
       ├── docker-compose.yml    # Généré par Ansible (ne pas modifier manuellement)
-      ├── data/                 # Volumes persistants (permissions: docker-admin:docker, 770)
+      ├── data/                 # Volumes persistants (permissions: docker-admin:docker, 2775)
       └── README.md             # Documentation générée automatiquement
   ```
 - **Fichiers exclus** :
   - `.env.json` (local uniquement, **jamais déployé**).
   - Fichiers temporaires ou de build (ex: `node_modules/`).
 - **Permissions** :
-  - `data/` : `chown docker-admin:docker && chmod 770`.
+  - `data/` : `chown docker-admin:docker && chmod 2775` (SetGID).
   - `docker-compose.yml` : `644` (lecture seule pour `docker-admin`).
 - **Nettoyage** : Les fichiers `group_vars/*.yml` vides ou contenant uniquement des commentaires peuvent être supprimés. Ansible les ignore s'ils sont absents.
 
@@ -209,7 +209,7 @@ Ce document décrit les conventions, règles et apprentissages clés pour travai
      ```
    - Vérifier les permissions :
      ```bash
-     ansible apps-runner-ryzen -m file -a "path=/home/docker-admin/apps/hello/data owner=docker-admin group=docker mode=770"
+     ansible apps-runner-ryzen -m file -a "path=/home/docker-admin/apps/hello/data owner=docker-admin group=docker mode=2775"
      ```
 3. **Vérification** :
    - Statut des conteneurs :
@@ -229,14 +229,14 @@ Ce document décrit les conventions, règles et apprentissages clés pour travai
   - ❌ **Jamais** stocker des secrets en clair dans les fichiers YAML ou templates.
 - **Permissions** :
   - Les répertoires de volumes (`data/`) doivent appartenir à `docker-admin:docker` (UID/GID 1000).
-  - Utiliser `chmod 770` pour les répertoires persistants (jamais `777`).
+  - Utiliser `chmod 2775` (SetGID) pour les répertoires persistants (jamais `777`).
 
 ### 3.4 Résolution des Problèmes
 | Problème                          | Solution                                                                                     |
 |-----------------------------------|----------------------------------------------------------------------------------------------|
 | **Erreur YAML**                   | Valider avec `yamllint` et `docker-compose config`. Vérifier les sauts de ligne et l'indentation. |
 | **Conflit de ports**              | Vérifier les ports utilisés sur le runner avec `ss -tulnp`.                                |
-| **Permissions sur les volumes**   | `chown docker-admin:docker /home/docker-admin/apps/<app_name>/data && chmod 770 data`      |
+| **Permissions sur les volumes**   | `chown docker-admin:docker /home/docker-admin/apps/<app_name>/data && chmod 2775 data`      |
 | **Image Docker introuvable**      | Vérifier le nom/tag de l'image dans `.env.json`.                                            |
 | **Variables manquantes**          | Vérifier que toutes les variables sont définies dans `.env.json`.                          |
 
@@ -304,7 +304,7 @@ Toute vérification qui échoue doit être corrigée avant que le changement ne 
    - **Cause** : Les répertoires `data/` sont créés avec les mauvaises permissions.
    - **Solution** : Toujours vérifier les permissions après création :
      ```bash
-     chown docker-admin:docker /home/docker-admin/apps/<app_name>/data && chmod 770 data
+     chown docker-admin:docker /home/docker-admin/apps/<app_name>/data && chmod 2775 data
      ```
 
 ### 4.2 Bonnes Pratiques

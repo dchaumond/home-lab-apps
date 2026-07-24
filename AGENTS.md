@@ -95,8 +95,10 @@ Exécute les demandes en affichant d'abord l'arborescence cible, puis les fichie
 
 | Runner | Apps déployées |
 |---|---|
-| `apps-runner-ryzen` | `hello` (nginx test, bridge, port 8080) |
-| `home-automation-ryzen` | `home-assistant` (domotique, host networking), `mosquitto` (MQTT, bridge) |
+| `apps-runner-ryzen` | `hello` (nginx test, bridge, port 8080), `agentdvr` (surveillance, bridge, port 8090) |
+| `home-automation-ryzen` | `home-assistant` (domotique, host networking), `mosquitto` (MQTT, bridge, ports 1883/9001) |
+| `apps-runner-nuc` (192.168.1.22) | `hello` (nginx test, bridge, port 8080), `agentdvr` (surveillance, bridge, port 8090) |
+| `home-automation-nuc` (192.168.1.20) | `home-assistant` (domotique, host networking), `mosquitto` (MQTT, bridge, ports 1883/9001) |
 
 ### Flux des Variables
 
@@ -107,16 +109,18 @@ Exécute les demandes en affichant d'abord l'arborescence cible, puis les fichie
 ### Cycle de Déploiement (implémenté dans `tasks/main.yml`)
 
 | Étape | Action | Condition |
-|---|---|---|
+|---|---|---|---|
 | 1 | `set_fact app_dir` | |
 | 2 | Création répertoires + volumes (mode `2775`) | |
-| 3 | Template `docker-compose.yml` | `register: deploy_template` |
-| 4 | `docker compose config` | |
-| 5 | `docker compose pull` | `register: compose_pull` |
-| 6 | `docker compose down` | `when: deploy_template changed or compose_pull changed` |
-| 7 | `docker compose up -d --remove-orphans` | `when: deploy_template changed or compose_pull changed` |
-| 8 | Healthcheck `compose ps` | `until/retries:10/delay:3` avec `'running' in stdout` |
-| 9 | README.md (app + global) | |
+| 3 | Template `mosquitto.conf` (si mosquitto) | `when: app_name == "mosquitto"`, `become: true` |
+| 4 | Template `docker-compose.yml` | `register: deploy_template` |
+| 5 | `docker compose config` | |
+| 6 | `docker compose pull` | `register: compose_pull` |
+| 7 | `docker compose down` | `when: deploy_template changed or compose_pull changed` |
+| 8 | `docker compose up -d --remove-orphans` | `when: deploy_template changed or compose_pull changed` |
+| 9 | Healthcheck `compose ps` | `until/retries:10/delay:3` avec `'running' in stdout` |
+| 10 | Healthcheck port MQTT 1883 (si mosquitto) | `wait_for` port 1883, timeout 15s |
+| 11 | README.md (app + global) | |
 
 ### Patterns Critiques à Réutiliser
 
@@ -124,6 +128,8 @@ Exécute les demandes en affichant d'abord l'arborescence cible, puis les fichie
 - **Filtrage runner** : `apps | default([app_name])` dans les templates pour lister uniquement les apps du runner
 - **Healthcheck** : `until/retries:10/delay:3` sur `docker compose ps --format json`
 - **Permissions** : `2775` (SetGID), `owner: docker-admin`, `group: docker`
+- **Template ports** : Dans `docker-compose.yml.j2`, la condition pour afficher les ports doit être `network_mode != "host"` (pas `is not defined`), sinon les apps avec `network_mode: "bridge"` perdent leur port mapping.
+- **Mosquitto healthcheck** : `wait_for` port 1883 avec timeout 15s, conditionné à `app_name == "mosquitto"`
 
 ### Points d'Attention
 
@@ -132,6 +138,9 @@ Exécute les demandes en affichant d'abord l'arborescence cible, puis les fichie
 - `site_vars/apps_definitions/` n'existe pas → tout est centralisé dans `.env.json`
 - Les templates `.j2` échouent au `yamllint` (syntaxe Jinja2) → ne pas s'en inquiéter
 - Le dépôt ne contient **pas** de Terraform/Packer → tout est Ansible pur
+- **Clé SSH** : la clé à utiliser est `~/.ssh/id_ed25519_homelab` (pas `id_ed25519`)
+- **NUCs** : IPs des runners NUC : `apps-runner-nuc` = 192.168.1.22, `home-automation-nuc` = 192.168.1.20
+- **Mosquitto** : le fichier `mosquitto.conf` doit être créé dans `data/config/` avec `sudo` (le directory appartient à UID 1883:1883) avant le premier démarrage. Le playbook le déploie automatiquement via le template `mosquitto.conf.j2` quand `app_name == "mosquitto"`.
 
 ---
 

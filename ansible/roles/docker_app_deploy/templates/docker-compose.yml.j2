@@ -21,7 +21,7 @@ services:
       - "{{ key }}={{ value }}"
 {% endfor %}
 {% endif %}
-{% if env_json.apps[app_name].network_mode is not defined and env_json.apps[app_name].ports | default([]) | length > 0 %}
+{% if env_json.apps[app_name].network_mode | default("") != "host" and env_json.apps[app_name].ports | default([]) | length > 0 %}
     ports:
 {% for port in env_json.apps[app_name].ports %}
       - "{{ port }}"

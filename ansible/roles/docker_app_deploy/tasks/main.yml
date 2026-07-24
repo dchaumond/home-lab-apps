@@ -31,6 +31,17 @@
     state: started
   become: true
 
+- name: Déployer la configuration mosquitto
+  ansible.builtin.template:
+    src: mosquitto.conf.j2
+    dest: "{{ app_dir }}/data/config/mosquitto.conf"
+    owner: "{{ env_json.apps[app_name].vol_owner | default('docker-admin') }}"
+    group: "{{ env_json.apps[app_name].vol_group | default('docker') }}"
+    mode: "0644"
+  register: mosquitto_config
+  when: app_name == "mosquitto"
+  become: true
+
 - name: Déployer la configuration DNS du daemon Docker
   ansible.builtin.template:
     src: daemon.json.j2
@@ -117,6 +128,14 @@
     and 'running' in compose_health.stdout
   retries: 10
   delay: 3
+
+- name: Vérifier que le port MQTT 1883 est accessible
+  ansible.builtin.wait_for:
+    port: 1883
+    host: "{{ ansible_default_ipv4.address | default('127.0.0.1') }}"
+    timeout: 15
+    state: started
+  when: app_name == "mosquitto"
 
 - name: Générer le README.md de l'application
   ansible.builtin.template:
